@@ -53,11 +53,11 @@ export const App = () => {
           element: authUser ? <ProfilePage /> : <Navigate to="/login" />,
         },
         {
-          path: "/signup",
+          path: "signup",
           element: !authUser ? <SignupPage /> : <Navigate to="/" />,
         },
         {
-          path: "/login",
+          path: "login",
           element: authUser ? <Navigate to="/" /> : <LoginPage />,
         },
       ],
