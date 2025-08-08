@@ -24,6 +24,11 @@ app.use(
   })
 );
 
+['MONGODB_URI', 'JWT_SECRET', 'CLOUDINARY_CLOUD_NAME'].forEach(v => {
+  if (!process.env[v]) console.error(`❌ Missing env var: ${v}`);
+});
+
+
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
