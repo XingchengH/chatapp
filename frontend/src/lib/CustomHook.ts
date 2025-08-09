@@ -1,12 +1,16 @@
 import { useEffect } from "react";
 
 function useClickOutside(
-  ref: React.RefObject<HTMLElement | null>,
+  refs: React.RefObject<HTMLElement | null>[],
   callback: () => void
 ) {
   useEffect(() => {
     function handleClick(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
+      if (
+        !refs.some(
+          (ref) => ref.current && ref.current.contains(event.target as Node)
+        )
+      ) {
         callback();
       }
     }
@@ -14,7 +18,7 @@ function useClickOutside(
     return () => {
       document.removeEventListener("mousedown", handleClick);
     };
-  }, [ref, callback]);
+  }, [refs, callback]);
 }
 
 export { useClickOutside };

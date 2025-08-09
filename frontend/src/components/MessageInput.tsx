@@ -15,7 +15,9 @@ export default function MessageInput() {
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(pickerRef, () => setShowEmojiPicker(false));
+  const toggleBtnRef = useRef<HTMLButtonElement>(null);
+
+  useClickOutside([pickerRef, toggleBtnRef], () => setShowEmojiPicker(false));
 
   const handleImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,6 +103,7 @@ export default function MessageInput() {
             type="button"
             className="hidden sm:flex btn btn-circle"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            ref={toggleBtnRef}
           >
             <span
               role="img"
