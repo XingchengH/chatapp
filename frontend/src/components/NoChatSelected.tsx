@@ -1,4 +1,4 @@
-import { MessageSquare } from "lucide-react";
+import { MessagesSquare } from "lucide-react";
 
 export default function NoChatSelected() {
   return (
@@ -11,7 +11,7 @@ export default function NoChatSelected() {
               className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center
              justify-center animate-bounce"
             >
-              <MessageSquare className="w-8 h-8 text-primary " />
+              <MessagesSquare className="w-8 h-8 text-primary " />
             </div>
           </div>
         </div>
