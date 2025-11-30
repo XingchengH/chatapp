@@ -1,21 +1,29 @@
-import moongoose from "mongoose";
+import mongoose from "mongoose";
 
-const userSchema = new moongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     email: {
       type: String,
       required: true,
       unique: true,
     },
+
     fullName: {
       type: String,
       required: true,
     },
+
     password: {
       type: String,
-      required: true,
+      required: false,
       minlength: 6,
     },
+
+    googleId: {
+      type: String,
+      required: false,
+    },
+
     profilePic: {
       type: String,
       default: "",
@@ -26,6 +34,6 @@ const userSchema = new moongoose.Schema(
   }
 );
 
-const User = moongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
 
 export default User;

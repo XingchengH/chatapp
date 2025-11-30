@@ -3,7 +3,8 @@ import { axiosInstance } from "../lib/axios.ts";
 import toast from "react-hot-toast";
 import { io, type Socket } from "socket.io-client";
 
-const BASE_URL = "http://localhost:8080";
+const BASE_URL =
+  import.meta.env.MODE === "development" ? "http://localhost:8080" : "";
 
 export type AuthUser = {
   _id: string;
@@ -32,6 +33,7 @@ type AuthStoreProps = {
   checkAuth: () => Promise<void>;
   signup: (data: FormData) => Promise<void>;
   login: (data: { email: string; password: string }) => Promise<void>;
+  loginWithGoogle: (token: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: { profilePic: string }) => Promise<void>;
   connectSocket: () => void;
@@ -100,6 +102,24 @@ export const useAuthStore = create<AuthStoreProps>((set, get) => ({
     } catch (error) {
       console.error("Error during login:", error);
       toast.error("Login failed. Please check your credentials.");
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
+  loginWithGoogle: async (token: string) => {
+    try {
+      set({ isLoggingIn: true });
+
+      const res = await axiosInstance.post("/auth/google", { token });
+
+      set({ authUser: res.data });
+      toast.success("Google login successful!");
+
+      get().connectSocket();
+    } catch (error) {
+      console.error(error);
+      toast.error("Google login failed");
     } finally {
       set({ isLoggingIn: false });
     }

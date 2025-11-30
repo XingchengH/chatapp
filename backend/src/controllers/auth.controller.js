@@ -2,6 +2,7 @@ import { generateToken } from "../lib/utils.js";
 import bcrypt from "bcryptjs";
 import User from "../models/user.model.js";
 import cloudinary from "../lib/cloudinary.js";
+import { OAuth2Client } from "google-auth-library";
 
 export const signup = async (req, res) => {
   try {
@@ -75,6 +76,50 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Error during login:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+export const googleAuth = async (req, res) => {
+  try {
+    const token = req.body.token;
+
+    if (!token) {
+      return res.status(400).json({ message: "Token generation failed" });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        email,
+        fullName: name,
+        googleId,
+        profilePic: picture,
+        password: null,
+      });
+    }
+
+    const jwtToken = generateToken(user._id, res);
+    res.status(200).json({
+      message: "Google Login successful",
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic,
+      token: jwtToken,
+    });
+  } catch (error) {
+    console.error("Error during Google authentication:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -6,7 +6,7 @@ import {
   Loader2,
   Lock,
   Mail,
-  MessageSquare,
+  MessagesSquare,
   User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -56,7 +56,7 @@ export default function SignupPage() {
           <div className="text-center mb-8">
             <div className="flex flex-col items-center gap-2 group">
               <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <MessageSquare className="size-6 text-primary" />
+                <MessagesSquare className="size-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold mt-2">Create Account</h1>
               <p className="text-base-content/60">
@@ -77,7 +77,7 @@ export default function SignupPage() {
                 </div>
                 <input
                   type="text"
-                  className={`input input-bordered w-full pl-10`}
+                  className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your full name"
                   value={formData.fullName}
                   onChange={(e) =>
@@ -97,7 +97,7 @@ export default function SignupPage() {
                 </div>
                 <input
                   type="email"
-                  className={`input input-bordered w-full pl-10`}
+                  className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your email"
                   value={formData.email}
                   onChange={(e) =>
@@ -117,7 +117,7 @@ export default function SignupPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  className={`input input-bordered w-full pl-10`}
+                  className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your password"
                   value={formData.password}
                   onChange={(e) =>

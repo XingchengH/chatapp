@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import AuthImagePattern from "../components/AuthImagePattern";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Mail, MessageSquare, Lock, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Loader2, MessagesSquare } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 
 type FormData = {
   email: string;
@@ -17,11 +18,19 @@ export default function LoginPage() {
     password: "",
   });
 
-  const { login, isLoggingIn } = useAuthStore();
+  const { login, isLoggingIn, loginWithGoogle } = useAuthStore();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     login(formData);
+  };
+
+  const handleGoogleLogin = (credentialResponse: any) => {
+    loginWithGoogle(credentialResponse.credential);
+  };
+
+  const handleGoogleLoginError = (error: string) => {
+    console.error("Google login error:", error);
   };
 
   return (
@@ -33,12 +42,10 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <div className="flex flex-col items-center gap-2 group">
               <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <MessageSquare className="size-6 text-primary" />
+                <MessagesSquare className="size-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold mt-2">Welcome back</h1>
-              <p className="text-base-content/60">
-                Sign in to your account
-              </p>
+              <p className="text-base-content/60">Sign in to your account</p>
             </div>
           </div>
 
@@ -54,7 +61,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="email"
-                  className={`input input-bordered w-full pl-10`}
+                  className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your email"
                   value={formData.email}
                   onChange={(e) =>
@@ -74,7 +81,7 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  className={`input input-bordered w-full pl-10`}
+                  className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your password"
                   value={formData.password}
                   onChange={(e) =>
@@ -109,6 +116,14 @@ export default function LoginPage() {
                 <span>Sign in</span>
               )}
             </button>
+
+            {/* Google Login/Signup */}
+            <div className="mt-4 flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={handleGoogleLoginError}
+              />
+            </div>
           </form>
 
           <div className="text-center">
