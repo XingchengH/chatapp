@@ -3,7 +3,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import AuthImagePattern from "../components/AuthImagePattern";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, Loader2, MessagesSquare } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
 type FormData = {
   email: string;
@@ -25,12 +25,14 @@ export default function LoginPage() {
     login(formData);
   };
 
-  const handleGoogleLogin = (credentialResponse: any) => {
-    loginWithGoogle(credentialResponse.credential);
+  const handleGoogleLogin = (credentialResponse: CredentialResponse) => {
+    if (credentialResponse.credential) {
+      loginWithGoogle(credentialResponse.credential);
+    }
   };
 
-  const handleGoogleLoginError = (error: string) => {
-    console.error("Google login error:", error);
+  const handleGoogleLoginError = (): void => {
+    console.error("Google login error");
   };
 
   return (
