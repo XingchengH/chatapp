@@ -3,6 +3,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import AuthImagePattern from "../components/AuthImagePattern";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, Loader2, MessagesSquare } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 
 type FormData = {
   email: string;
@@ -17,11 +18,19 @@ export default function LoginPage() {
     password: "",
   });
 
-  const { login, isLoggingIn } = useAuthStore();
+  const { login, isLoggingIn, loginWithGoogle } = useAuthStore();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     login(formData);
+  };
+
+  const handleGoogleLogin = (credentialResponse: any) => {
+    loginWithGoogle(credentialResponse.credential);
+  };
+
+  const handleGoogleLoginError = (error: string) => {
+    console.error("Google login error:", error);
   };
 
   return (
@@ -36,9 +45,7 @@ export default function LoginPage() {
                 <MessagesSquare className="size-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold mt-2">Welcome back</h1>
-              <p className="text-base-content/60">
-                Sign in to your account
-              </p>
+              <p className="text-base-content/60">Sign in to your account</p>
             </div>
           </div>
 
@@ -109,6 +116,14 @@ export default function LoginPage() {
                 <span>Sign in</span>
               )}
             </button>
+
+            {/* Google Login/Signup */}
+            <div className="mt-4 flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={handleGoogleLoginError}
+              />
+            </div>
           </form>
 
           <div className="text-center">
