@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { parse } from "cookie";
 import express from "express";
 import { authenticateToken } from "./auth.js";
+import { clientOrigin } from "./config.js";
 
 export const userRoom = (userId) => "user:" + userId;
 const sessionRoom = (token) =>
@@ -12,16 +13,12 @@ export const app = express();
 export const server = http.createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    origin: clientOrigin(),
     credentials: true,
   },
   allowRequest: (req, callback) => {
     const origin = req.headers.origin;
-    callback(
-      null,
-      !origin ||
-        origin === (process.env.CLIENT_ORIGIN || "http://localhost:5173"),
-    );
+    callback(null, !origin || origin === clientOrigin());
   },
 });
 io.use(async (socket, next) => {

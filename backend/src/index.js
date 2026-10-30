@@ -6,6 +6,10 @@ try {
   const { port } = validateEnvironment();
   const { default: connectDB } = await import("./lib/db.js");
   await connectDB();
+  if (process.env.NODE_ENV === "production") {
+    const { ensureIndexes } = await import("./lib/indexes.js");
+    await ensureIndexes();
+  }
   await import("./app.js");
   const { server, io } = await import("./lib/socket.js");
   await new Promise((resolve, reject) => {

@@ -7,12 +7,13 @@ import path from "node:path";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { app } from "./lib/socket.js";
+import { clientOrigin } from "./lib/config.js";
 
 app.disable("x-powered-by");
 app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || 0));
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    origin: clientOrigin(),
     credentials: true,
   }),
 );

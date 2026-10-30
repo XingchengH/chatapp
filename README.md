@@ -41,10 +41,10 @@ Checks run backend tests, frontend tests, ESLint and a production build. Socket 
 The intended deployment is one Node process serving both the built frontend and API from one HTTPS origin.
 
 1. Use Node.js 24 and configure the backend environment variables through the hosting service.
-2. Set `NODE_ENV=production`, `CLIENT_ORIGIN=https://your-host.example` (no trailing slash), MongoDB, a strong `JWT_SECRET`, and all three Cloudinary credentials. Google IDs are optional.
+2. Set `NODE_ENV=production`, `CLIENT_ORIGIN=https://your-host.example` (no trailing slash), MongoDB, a strong `JWT_SECRET`, and all three Cloudinary credentials. Google IDs are optional. On Render, `CLIENT_ORIGIN` defaults to the platform's `RENDER_EXTERNAL_URL`; set it explicitly when using a custom domain.
 3. Set `TRUST_PROXY_HOPS` only to the known number of trusted reverse proxies in front of the app. Leave it at 0 for a direct connection. Do not use a blanket trust-all configuration.
 4. Build from the repository root with `npm run build`. The build uses the committed lockfiles through `npm ci` and explicitly installs frontend build tools even when `NODE_ENV=production`. Frontend `VITE_*` variables are public and baked in at build time; never put secrets in them.
-5. Create the database indexes before starting this version: `npm run db:indexes --prefix backend`. This adds indexes without dropping existing ones, including the unique retry key. Production auto-index creation is disabled.
+5. Production startup creates the required database indexes before accepting traffic, including the unique retry key, without dropping existing indexes or rewriting messages. To build them ahead of deployment, run `npm run db:indexes --prefix backend`. Mongoose's background auto-index creation is disabled in production.
 6. Start with `npm start`. Use `/health/ready` for the hosting readiness check and `/health/live` for liveness.
 
 The server validates configuration and waits for MongoDB before listening. It shuts down sockets and the database on SIGTERM/SIGINT. The frontend path is resolved from the source file, independent of the launch directory. Unknown API routes return JSON 404 responses.

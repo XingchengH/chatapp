@@ -1,3 +1,11 @@
+export function clientOrigin(env = process.env) {
+  return (
+    env.CLIENT_ORIGIN ||
+    (env.RENDER === "true" && env.RENDER_EXTERNAL_URL) ||
+    "http://localhost:5173"
+  );
+}
+
 export function validateEnvironment(env = process.env) {
   const required = ["MONGODB_URI", "JWT_SECRET"];
   const uploadCredentials = [
@@ -10,7 +18,11 @@ export function validateEnvironment(env = process.env) {
     uploadCredentials.some((key) => env[key]?.trim())
   )
     required.push(...uploadCredentials);
-  if (env.NODE_ENV === "production") required.push("CLIENT_ORIGIN");
+  if (
+    env.NODE_ENV === "production" &&
+    !(env.RENDER === "true" && env.RENDER_EXTERNAL_URL)
+  )
+    required.push("CLIENT_ORIGIN");
   const missing = required.filter((key) => !env[key]?.trim());
   if (missing.length)
     throw new Error(
@@ -21,9 +33,9 @@ export function validateEnvironment(env = process.env) {
   const port = Number(env.PORT || 8080);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("PORT must be between 1 and 65535");
-  const origin = new URL(env.CLIENT_ORIGIN || "http://localhost:5173");
+  const origin = new URL(clientOrigin(env));
   if (
-    origin.origin !== (env.CLIENT_ORIGIN || "http://localhost:5173") ||
+    origin.origin !== clientOrigin(env) ||
     !["http:", "https:"].includes(origin.protocol)
   )
     throw new Error("CLIENT_ORIGIN must be an HTTP(S) origin without a path");
