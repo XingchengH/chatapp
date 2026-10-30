@@ -3,5 +3,8 @@ dist/
 .vite/
 .env
 .env.*
+!.env.example
 *.log
 *.DS_Store
+output/
+.playwright-cli/

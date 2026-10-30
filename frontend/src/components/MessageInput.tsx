@@ -1,138 +1,173 @@
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, SmilePlus, X } from "lucide-react";
+import { Image, Send, SmilePlus, X, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import EmojiPicker from "emoji-picker-react";
 import { useClickOutside } from "../lib/CustomHook";
+import { IMAGE_ACCEPT, imageError } from "../lib/uploads";
 
-export default function MessageInput() {
-  const [text, setText] = useState<string>("");
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
+export default function MessageInput({ userId }: { userId: string }) {
+  const [text, setText] = useState("");
   const [imgPreview, setImgPreview] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [readingImage, setReadingImage] = useState(false);
+  const pending = useRef(false);
+  const attempt = useRef<{ content: string; id: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sendMessage } = useChatStore();
-
-  // emoji picker
-  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-
   const toggleBtnRef = useRef<HTMLButtonElement>(null);
-
   useClickOutside([pickerRef, toggleBtnRef], () => setShowEmojiPicker(false));
 
-  const handleImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file?.type.startsWith("image/")) {
-      toast.error("Please select an image file.");
+  const handleImgChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const error = imageError(file);
+    if (error) {
+      toast.error(error);
+      event.target.value = "";
       return;
     }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
+    setReadingImage(true);
+    reader.onload = () => {
       setImgPreview(reader.result as string);
+      setFailed(false);
     };
+    reader.onerror = () => toast.error("Could not read that image");
+    reader.onloadend = () => setReadingImage(false);
     reader.readAsDataURL(file);
   };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim() && !imgPreview) return;
-
+  const handleSendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (pending.current || readingImage || (!text.trim() && !imgPreview))
+      return;
+    const content = JSON.stringify([text.trim(), imgPreview]);
+    if (attempt.current?.content !== content)
+      attempt.current = { content, id: crypto.randomUUID() };
+    pending.current = true;
+    setSending(true);
+    setFailed(false);
     try {
-      await sendMessage({
-        text: text.trim(),
-        image: imgPreview,
-      });
-
+      await sendMessage(
+        {
+          text: text.trim(),
+          image: imgPreview,
+          clientMessageId: attempt.current.id,
+        },
+        userId,
+      );
       setText("");
       setImgPreview(null);
+      attempt.current = null;
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } catch {
+      setFailed(true);
+    } finally {
+      pending.current = false;
+      setSending(false);
     }
   };
-
-  const removeImgPreview = (): void => {
-    setImgPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
   return (
-    <div className="p-4 w-full">
+    <div className="p-3 sm:p-4 w-full">
       {imgPreview && (
-        <div className="mb-3 flex items-center gap-2">
-          <div className="relative">
-            <img src={imgPreview} alt="Preview" />
-            <button
-              type="button"
-              className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-base-300 flex items-center justify-center"
-              onClick={removeImgPreview}
-            >
-              <X className="size-3" />
-            </button>
-          </div>
+        <div className="mb-3 relative w-fit">
+          <img
+            src={imgPreview}
+            alt="Attachment preview"
+            className="max-h-36 max-w-full rounded-lg"
+          />
+          <button
+            type="button"
+            aria-label="Remove attachment"
+            disabled={sending}
+            className="absolute -top-2 -right-2 btn btn-circle btn-xs"
+            onClick={() => {
+              setImgPreview(null);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
-
+      {failed && (
+        <p role="alert" className="text-error text-sm mb-2">
+          Message not sent. Your draft is saved. Try sending again.
+        </p>
+      )}
       <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2">
-          <input
-            type="text"
-            className="w-full input input-bordered rounded-lg input-sm sm:input-md focus:outline-none"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImgChange}
-          />
-          <button
-            type="button"
-            className={`hidden sm:flex btn btn-circle ${
-              imgPreview ? "text-emerald-500" : "text-zinc-400"
-            }`}
-            onClick={() => fileInputRef.current?.click()}
+        <input
+          aria-label="Message"
+          type="text"
+          maxLength={10000}
+          disabled={sending}
+          className="input input-bordered min-w-0 flex-1"
+          placeholder="Type a message..."
+          value={text}
+          onChange={(event) => {
+            setText(event.target.value);
+            setFailed(false);
+          }}
+        />
+        <input
+          type="file"
+          accept={IMAGE_ACCEPT}
+          aria-label="Choose image"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleImgChange}
+          disabled={sending || readingImage}
+        />
+        <button
+          type="button"
+          aria-label="Attach image"
+          className="btn btn-circle btn-sm"
+          disabled={sending || readingImage}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Image size={18} />
+        </button>
+        <button
+          type="button"
+          aria-label="Choose emoji"
+          aria-expanded={showEmojiPicker}
+          disabled={sending}
+          className="btn btn-circle btn-sm"
+          ref={toggleBtnRef}
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+        >
+          <SmilePlus size={18} />
+        </button>
+        {showEmojiPicker && (
+          <div
+            className="absolute right-4 bottom-24 z-50 max-w-[calc(100vw-2rem)]"
+            ref={pickerRef}
           >
-            <Image size={20} />
-          </button>
-          {/* Emoji picker */}
-          <button
-            type="button"
-            className="hidden sm:flex btn btn-circle"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            ref={toggleBtnRef}
-          >
-            <span
-              role="img"
-              aria-label="emoji-picker"
-              className={`${
-                showEmojiPicker ? "text-emerald-500" : "text-zinc-400"
-              }`}
-            >
-              <SmilePlus size={20} />
-            </span>
-          </button>
-
-          {showEmojiPicker && (
-            <div className="absolute right-10 bottom-30 z-50" ref={pickerRef}>
+            <Suspense fallback={<p role="status">Loading emoji…</p>}>
               <EmojiPicker
+                width="min(350px, calc(100vw - 2rem))"
                 onEmojiClick={(emoji) => {
-                  setText((prevText) => prevText + emoji.emoji);
+                  setText((text) => (text + emoji.emoji).slice(0, 10000));
                   setShowEmojiPicker(false);
                 }}
               />
-            </div>
-          )}
-        </div>
+            </Suspense>
+          </div>
+        )}
         <button
           type="submit"
-          className="btn btn-sm btn-circle"
-          disabled={!text.trim() && !imgPreview}
+          aria-label={failed ? "Retry message" : "Send message"}
+          className="btn btn-primary btn-circle btn-sm"
+          disabled={sending || readingImage || (!text.trim() && !imgPreview)}
         >
-          <Send size={20} />
+          {sending ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Send size={18} />
+          )}
         </button>
       </form>
     </div>

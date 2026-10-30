@@ -5,78 +5,105 @@ import { Users } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 
 export default function Sidebar() {
-  const { selectedUser, getUsers, users, setSelectedUser, isUsersLoading } =
-    useChatStore();
-
+  const {
+    selectedUser,
+    getUsers,
+    users,
+    setSelectedUser,
+    isUsersLoading,
+    usersCursor,
+  } = useChatStore();
   const onlineUsers = useAuthStore((state) => state.onlineUsers);
-  const [showOnlineUsers, setShowOnlineUsers] = useState<true | false>(false);
-
+  const [showOnline, setShowOnline] = useState(false);
+  const [search, setSearch] = useState("");
   useEffect(() => {
-    getUsers();
-  }, [getUsers]);
-
-  const filterUsers = showOnlineUsers
+    const timer = setTimeout(() => void getUsers(search), 250);
+    return () => clearTimeout(timer);
+  }, [getUsers, search]);
+  const filtered = showOnline
     ? users.filter((user) => onlineUsers.includes(user._id))
     : users;
-
-  if (isUsersLoading) {
-    return <SidebarSkeleton />;
-  }
-
   return (
-    <aside className="h-full w-22 lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200">
-      <div className="border-b border-base-300 w-full p-5">
+    <aside
+      className={
+        (selectedUser ? "hidden md:flex " : "flex ") +
+        "h-full w-full md:w-72 shrink-0 border-r border-base-300 flex-col"
+      }
+    >
+      <div className="border-b border-base-300 p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <Users className="size-6" />
-          <span className="font-medium hidden lg:block">Contacts</span>
+          <Users size={22} />
+          <span className="font-medium">Contacts</span>
         </div>
-
-        <div className="mt-3 hidden lg:flex items-center gap-2">
-          <label className="cursor-pointer flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showOnlineUsers}
-              onChange={(e) => setShowOnlineUsers(e.target.checked)}
-              className="checkbox checkbox-sm"
-            />
-            <span className="text-sm">Show online only</span>
-          </label>
-          <span className="text-xs text-zinc-500">({onlineUsers.length - 1} online)</span>
-        </div>
+        <input
+          type="search"
+          aria-label="Search contacts"
+          placeholder="Search contacts"
+          className="input input-bordered input-sm w-full"
+          maxLength={100}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-sm"
+            checked={showOnline}
+            onChange={(event) => setShowOnline(event.target.checked)}
+          />
+          Show online only
+        </label>
       </div>
-
-      <div className="overflow-y-auto w-full py-3">
-        {filterUsers.map((user) => (
-          <button
-            type="button"
-            key={user._id}
-            onClick={() => setSelectedUser(user)}
-            className={`w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors cursor-pointer ${
-              selectedUser?._id === user._id
-                ? "bg-base-300 ring-1 ring-base-300"
-                : ""
-            }`}
-          >
-            <div className="relative mx-auto lg:mx-0">
-              <img
-                src={user.profilePic || "/avatar.png"}
-                alt={user.fullName}
-                className="size-12 object-cover rounded-full"
-              />
-              {onlineUsers.includes(user?._id) && (
-                <span className="absolute bottom-0 right-0 size-2 bg-green-500 rounded-full ring-2 ring-zinc-900"></span>
-              )}
-            </div>
-
-            {/* User info */}
-            <div className="hidden lg:block text-left min-w-0">
-              <div className="font-medium truncate">{user.fullName}</div>
-              <div className="text-sm text-zinc-400">
-                {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+      <div className="overflow-y-auto flex-1 py-2">
+        {isUsersLoading && !users.length ? (
+          <SidebarSkeleton />
+        ) : (
+          filtered.map((user) => (
+            <button
+              type="button"
+              key={user._id}
+              onClick={() => setSelectedUser(user)}
+              aria-pressed={selectedUser?._id === user._id}
+              className={
+                "w-full p-3 flex items-center gap-3 hover:bg-base-300 " +
+                (selectedUser?._id === user._id ? "bg-base-300" : "")
+              }
+            >
+              <div className="relative shrink-0">
+                <img
+                  src={user.profilePic || "/avatar.png"}
+                  alt=""
+                  className="size-12 object-cover rounded-full"
+                />
+                {onlineUsers.includes(user._id) && (
+                  <span className="absolute bottom-0 right-0 size-2 bg-green-500 rounded-full" />
+                )}
               </div>
-            </div>
+              <div className="text-left min-w-0">
+                <div className="font-medium truncate">{user.fullName}</div>
+                <div className="text-xs opacity-60">
+                  {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                </div>
+              </div>
+            </button>
+          ))
+        )}
+        {!isUsersLoading && !filtered.length && (
+          <p className="p-4 text-sm opacity-60">
+            {showOnline
+              ? "No online contacts in this list."
+              : "No contacts found."}
+          </p>
+        )}
+        {usersCursor && (
+          <button
+            className="btn btn-sm block mx-auto my-3"
+            disabled={isUsersLoading}
+            onClick={() => void getUsers(search, true)}
+          >
+            {isUsersLoading ? "Loading…" : "Load more contacts"}
           </button>
-        ))}
+        )}
       </div>
     </aside>
   );

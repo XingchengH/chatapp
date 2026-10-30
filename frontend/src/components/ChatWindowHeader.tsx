@@ -33,6 +33,7 @@ export default function ChatWindowHeader() {
         {/* Close button */}
         <button
           type="button"
+          aria-label="Back to contacts"
           onClick={() => setSelectedUser(null)}
           className="cursor-pointer hover:opacity-80"
         >

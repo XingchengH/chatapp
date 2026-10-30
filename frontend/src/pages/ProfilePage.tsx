@@ -1,6 +1,8 @@
 import { Camera, Mail, User } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useState } from "react";
+import toast from "react-hot-toast";
+import { imageError, IMAGE_ACCEPT } from "../lib/uploads";
 
 export default function ProfilePage() {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -10,6 +12,12 @@ export default function ProfilePage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0] as File;
+    const error = imageError(file);
+    if (error) {
+      toast.error(error);
+      e.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
 
@@ -18,8 +26,13 @@ export default function ProfilePage() {
     reader.onload = async () => {
       const base64Image = reader.result as string;
       setSelectedImg(base64Image);
-      await updateProfile({ profilePic: base64Image });
+      try {
+        await updateProfile({ profilePic: base64Image });
+      } catch {
+        setSelectedImg(null);
+      }
     };
+    reader.onerror = () => toast.error("Could not read that image");
   };
 
   return (
@@ -50,7 +63,7 @@ export default function ProfilePage() {
                   type="file"
                   id="avatar-upload"
                   className="hidden"
-                  accept="image/*"
+                  accept={IMAGE_ACCEPT}
                   onChange={handleImageUpload}
                   disabled={isUpdatingProfile}
                 />

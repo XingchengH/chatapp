@@ -1,6 +1,8 @@
 import { config } from "dotenv";
 import connectDB from "../lib/db.js";
 import User from "../models/user.model.js";
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 config();
 
@@ -102,14 +104,22 @@ const seedUsers = [
 
 const seedDatabase = async () => {
   try {
+    if (process.env.NODE_ENV === "production")
+      throw new Error("Demo seeding is disabled in production");
     await connectDB();
 
-    await User.insertMany(seedUsers);
+    const users = await Promise.all(
+      seedUsers.map(async (user) => ({
+        ...user,
+        password: await bcrypt.hash(user.password, 10),
+      })),
+    );
+    await User.insertMany(users);
     console.log("Database seeded successfully");
   } catch (error) {
     console.error("Error seeding database:", error);
   } finally {
-    mongoose.connection.close();
+    await mongoose.connection.close();
   }
 };
 

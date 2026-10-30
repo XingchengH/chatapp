@@ -6,17 +6,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      lowercase: true,
     },
 
     fullName: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 100,
     },
 
     password: {
       type: String,
       required: false,
       minlength: 6,
+      select: false,
     },
 
     googleId: {
@@ -31,7 +36,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const User = mongoose.model("User", userSchema);

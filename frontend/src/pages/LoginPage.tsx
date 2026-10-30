@@ -63,6 +63,8 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="email"
+                  aria-label="Email"
+                  autoComplete="email"
                   className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your email"
                   value={formData.email}
@@ -83,6 +85,8 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
+                  aria-label="Password"
+                  autoComplete="current-password"
                   className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your password"
                   value={formData.password}
@@ -93,6 +97,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center z-10"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -120,12 +125,14 @@ export default function LoginPage() {
             </button>
 
             {/* Google Login/Signup */}
-            <div className="mt-4 flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleLogin}
-                onError={handleGoogleLoginError}
-              />
-            </div>
+            {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+              <div className="mt-4 flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleLogin}
+                  onError={handleGoogleLoginError}
+                />
+              </div>
+            )}
           </form>
 
           <div className="text-center">

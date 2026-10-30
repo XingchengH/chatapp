@@ -30,13 +30,18 @@ export default function SignupPage() {
   const { signup, isSigningUp } = useAuthStore();
 
   const validateForm = () => {
-    if (!formData.fullName.trim()) return toast.error("Full name is required");
-    if (!formData.email.trim()) return toast.error("Email is required");
-    if (!/^\S+@\S+\.\S+$/.test(formData.email))
-      return toast.error("Invalid email");
-    if (!formData.password) return toast.error("Password is required");
+    const invalid = (message: string) => {
+      toast.error(message);
+      return false;
+    };
+    if (!formData.fullName.trim()) return invalid("Full name is required");
+    if (!formData.email.trim()) return invalid("Email is required");
+    if (!/^\S+@\S+\.\S+$/.test(formData.email)) return invalid("Invalid email");
+    if (!formData.password) return invalid("Password is required");
     if (formData.password.length < 6)
-      return toast.error("Password must be at least 6 characters long");
+      return invalid("Password must be at least 6 characters long");
+    if (new TextEncoder().encode(formData.password).length > 72)
+      return invalid("Password must be at most 72 bytes");
 
     return true;
   };
@@ -44,7 +49,12 @@ export default function SignupPage() {
     e.preventDefault();
 
     const isValid = validateForm();
-    if (isValid) signup(formData);
+    if (isValid)
+      signup({
+        ...formData,
+        email: formData.email.trim().toLowerCase(),
+        fullName: formData.fullName.trim(),
+      });
   };
 
   return (
@@ -77,6 +87,9 @@ export default function SignupPage() {
                 </div>
                 <input
                   type="text"
+                  aria-label="Full name"
+                  autoComplete="name"
+                  maxLength={100}
                   className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your full name"
                   value={formData.fullName}
@@ -97,6 +110,8 @@ export default function SignupPage() {
                 </div>
                 <input
                   type="email"
+                  aria-label="Email"
+                  autoComplete="email"
                   className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your email"
                   value={formData.email}
@@ -117,6 +132,8 @@ export default function SignupPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
+                  aria-label="Password"
+                  autoComplete="new-password"
                   className={`input input-bordered w-full pl-10 focus:outline-none`}
                   placeholder="Please enter your password"
                   value={formData.password}
@@ -127,6 +144,7 @@ export default function SignupPage() {
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center z-10"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (

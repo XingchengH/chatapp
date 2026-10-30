@@ -22,19 +22,32 @@ export default function NavBar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link to="/settings" className="btn btn-sm gap-2 transition-all">
+            <Link
+              to="/settings"
+              aria-label="Settings"
+              className="btn btn-sm gap-2 transition-all"
+            >
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Settings</span>
             </Link>
 
             {authUser && (
               <>
-                <Link to="/profile" className="btn btn-sm gap-2">
+                <Link
+                  to="/profile"
+                  aria-label="Profile"
+                  className="btn btn-sm gap-2"
+                >
                   <User className="size-5" />
                   <span className="hidden sm:inline">Profile</span>
                 </Link>
 
-                <button type="button" className="flex gap-2 items-center cursor-pointer" onClick={logout}>
+                <button
+                  type="button"
+                  aria-label="Log out"
+                  className="flex gap-2 items-center cursor-pointer"
+                  onClick={logout}
+                >
                   <LogOut className="size-5" />
                   <span className="hidden sm:inline">Logout</span>
                 </button>

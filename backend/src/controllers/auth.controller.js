@@ -1,167 +1,129 @@
-import { generateToken } from "../lib/utils.js";
 import bcrypt from "bcryptjs";
-import User from "../models/user.model.js";
-import cloudinary from "../lib/cloudinary.js";
 import { OAuth2Client } from "google-auth-library";
+import User from "../models/user.model.js";
+import { uploadImage } from "../lib/cloudinary.js";
+import { generateToken, cookieOptions } from "../lib/utils.js";
+import { publicUser } from "../lib/auth.js";
+import { disconnectSession } from "../lib/socket.js";
+import { HttpError, respondWithError } from "../lib/errors.js";
+import {
+  validateEmail,
+  validatePassword,
+  validateFullName,
+  validateImage,
+  escapeRegex,
+} from "../lib/validation.js";
 
+// Exact lookup uses the email index. Fallback preserves access for legacy mixed-case addresses.
+async function findByEmail(email, includePassword = false) {
+  const select = includePassword ? "+password" : "-password";
+  const exact = await User.findOne({ email }).select(select);
+  if (exact) return exact;
+  return User.findOne({
+    email: { $regex: "^\\s*" + escapeRegex(email) + "\\s*$", $options: "i" },
+  }).select(select);
+}
 export const signup = async (req, res) => {
   try {
-    const { email, fullName, password } = req.body;
-    if (!email || !fullName || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters long" });
-    }
-
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const newUser = await User.create({
+    const email = validateEmail(req.body?.email);
+    const fullName = validateFullName(req.body?.fullName);
+    const password = validatePassword(req.body?.password);
+    if (await findByEmail(email))
+      throw new HttpError(409, "An account with that email already exists");
+    const user = await User.create({
       email,
       fullName,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
     });
-
-    const token = generateToken(newUser._id, res);
-
-    await newUser.save();
-
-    res.status(201).json({
-      message: "User created successfully",
-      _id: newUser._id,
-      fullName: newUser.fullName,
-      email: newUser.email,
-      profilePic: newUser.profilePic,
-      token: token,
-    });
+    generateToken(user._id, res);
+    res.status(201).json(publicUser(user));
   } catch (error) {
-    console.error("Error during signup:", error);
-    res.status(500).json({ message: "Internal server error" });
+    respondWithError(res, error);
   }
 };
-
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const token = generateToken(user._id, res);
-
-    res.status(200).json({
-      message: "Login successful",
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      profilePic: user.profilePic,
-      token: token,
-    });
+    const email = validateEmail(req.body?.email);
+    const password = validatePassword(req.body?.password, 1);
+    const user = await findByEmail(email, true);
+    if (!user?.password || !(await bcrypt.compare(password, user.password)))
+      throw new HttpError(
+        401,
+        "Invalid credentials. Google accounts should sign in with Google.",
+      );
+    generateToken(user._id, res);
+    res.status(200).json(publicUser(user));
   } catch (error) {
-    console.error("Error during login:", error);
-    res.status(500).json({ message: "Internal server error" });
+    respondWithError(res, error);
   }
 };
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
+const client = new OAuth2Client();
 export const googleAuth = async (req, res) => {
   try {
-    const token = req.body.token;
-
-    if (!token) {
-      return res.status(400).json({ message: "Token generation failed" });
-    }
-
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
-
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = await User.create({
-        email,
-        fullName: name,
-        googleId,
-        profilePic: picture,
-        password: null,
+    if (!process.env.GOOGLE_CLIENT_ID)
+      throw new HttpError(503, "Google sign-in is not configured");
+    const token = req.body?.token;
+    if (typeof token !== "string" || !token || token.length > 10000)
+      throw new HttpError(400, "A Google credential is required");
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
       });
+      payload = ticket.getPayload();
+    } catch {
+      throw new HttpError(401, "Invalid Google credential");
     }
-
-    const jwtToken = generateToken(user._id, res);
-    res.status(200).json({
-      message: "Google Login successful",
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      profilePic: user.profilePic,
-      token: jwtToken,
-    });
+    if (!payload?.email_verified || !payload.sub)
+      throw new HttpError(401, "A verified Google email is required");
+    const email = validateEmail(payload.email);
+    let user = await User.findOne({ googleId: payload.sub });
+    if (!user) {
+      user = await findByEmail(email);
+      if (user) {
+        // Do not silently link a third-party-email Google identity to an existing account.
+        if (user.googleId || !(email.endsWith("@gmail.com") || payload.hd))
+          throw new HttpError(
+            409,
+            "Use your original sign-in method for this account",
+          );
+        user.googleId = payload.sub;
+        await user.save();
+      } else {
+        user = await User.create({
+          email,
+          fullName: validateFullName(payload.name || email.split("@")[0]),
+          googleId: payload.sub,
+          profilePic: payload.picture || "",
+        });
+      }
+    }
+    generateToken(user._id, res);
+    res.status(200).json(publicUser(user));
   } catch (error) {
-    console.error("Error during Google authentication:", error);
-    res.status(500).json({ message: "Internal server error" });
+    respondWithError(res, error);
   }
 };
-
 export const logout = async (req, res) => {
-  try {
-    res.cookie("jwt", "", { maxAge: 0 });
-    res.status(200).json({ message: "Logout successful" });
-  } catch (error) {
-    console.error("Error during logout:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
+  disconnectSession(req.cookies?.jwt);
+  res.clearCookie("jwt", cookieOptions());
+  res.status(200).json({ message: "Logout successful" });
 };
-
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic } = req.body;
-    const userId = req.user._id; // able to access user ID from middleware since req.user is set
-
-    if (!profilePic) {
-      return res.status(400).json({ message: "Profile picture is required" });
-    }
-
-    const uploadRes = await cloudinary.uploader.upload(profilePic);
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { profilePic: uploadRes.secure_url },
-      { new: true }
+    const profilePic = validateImage(req.body?.profilePic);
+    const upload = await uploadImage(profilePic);
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { profilePic: upload.secure_url },
+      { new: true, runValidators: true },
     );
-
-    res.status(200).json(updatedUser);
+    if (!user) throw new HttpError(404, "User not found");
+    res.status(200).json(publicUser(user));
   } catch (error) {
-    console.error("Error updating profile:", error);
-    res.status(500).json({ message: "Internal server error" });
+    respondWithError(res, error);
   }
 };
-
-export const checkAuth = async (req, res) => {
-  try {
-    res.status(200).json(req.user);
-  } catch (error) {
-    console.error("Error checking authentication:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
+export const checkAuth = (req, res) =>
+  res.status(200).json(publicUser(req.user));
