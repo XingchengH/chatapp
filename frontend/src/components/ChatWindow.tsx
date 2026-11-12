@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { EMPTY_CONVERSATION, useChatStore } from "../store/useChatStore";
 import ChatWindowHeader from "./ChatWindowHeader";
 import MessageInput from "./MessageInput";
-import VoiceRecorder from "./VoiceRecorder";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTimestamp } from "../lib/utils";
@@ -131,10 +130,6 @@ export default function ChatWindow() {
         )}
       </div>
       <MessageInput key={selectedUser._id} userId={selectedUser._id} />
-      <VoiceRecorder
-        key={"voice-" + selectedUser._id}
-        userId={selectedUser._id}
-      />
     </div>
   );
 }

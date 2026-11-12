@@ -4,6 +4,7 @@ import { Image, Send, SmilePlus, X, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useClickOutside } from "../lib/CustomHook";
 import { IMAGE_ACCEPT, imageError } from "../lib/uploads";
+import VoiceRecorder from "./VoiceRecorder";
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
 export default function MessageInput({ userId }: { userId: string }) {
@@ -71,7 +72,7 @@ export default function MessageInput({ userId }: { userId: string }) {
     }
   };
   return (
-    <div className="p-3 sm:p-4 w-full">
+    <div className="relative p-3 sm:p-4 w-full">
       {imgPreview && (
         <div className="mb-3 relative w-fit">
           <img
@@ -141,6 +142,7 @@ export default function MessageInput({ userId }: { userId: string }) {
         >
           <SmilePlus size={18} />
         </button>
+        <VoiceRecorder userId={userId} />
         {showEmojiPicker && (
           <div
             className="absolute right-4 bottom-24 z-50 max-w-[calc(100vw-2rem)]"

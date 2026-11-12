@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
+import { Mic, Loader2 } from "lucide-react";
 
 export default function VoiceRecorder({ userId }: { userId: string }) {
   const recorder = useRef<MediaRecorder | null>(null);
@@ -113,17 +114,15 @@ export default function VoiceRecorder({ userId }: { userId: string }) {
     setSending(true);
     setError("");
     try {
-      await useChatStore
-        .getState()
-        .sendMessage(
-          {
-            text: "",
-            image: null,
-            audio: draft.blob,
-            clientMessageId: draft.id,
-          },
-          userId,
-        );
+      await useChatStore.getState().sendMessage(
+        {
+          text: "",
+          image: null,
+          audio: draft.blob,
+          clientMessageId: draft.id,
+        },
+        userId,
+      );
       if (alive.current) setDraft(null);
     } catch {
       if (alive.current)
@@ -133,56 +132,71 @@ export default function VoiceRecorder({ userId }: { userId: string }) {
     }
   }
   return (
-    <div className="px-3 pb-3 space-y-2">
-      {error && (
-        <p role="alert" className="text-error text-sm">
-          {error}
-        </p>
-      )}
-      {recording ? (
-        <div className="flex items-center gap-2">
-          <span role="status">
-            Recording {Math.floor(seconds / 60)}:
-            {String(seconds % 60).padStart(2, "0")}
-          </span>
-          <button
-            className="btn btn-sm"
-            onClick={() => recorder.current?.stop()}
-          >
-            Stop recording
-          </button>
+    <div className="shrink-0">
+      <button
+        type="button"
+        className={"btn btn-circle btn-sm " + (recording ? "btn-error" : "")}
+        aria-label={
+          requesting ? "Waiting for microphone" : "Record voice message"
+        }
+        title="Record voice message"
+        disabled={requesting || recording || sending || Boolean(draft)}
+        onClick={() => void start()}
+      >
+        {requesting ? (
+          <Loader2 size={18} className="animate-spin" />
+        ) : (
+          <Mic size={18} />
+        )}
+      </button>
+      {(error || recording || draft) && (
+        <div className="absolute bottom-full right-3 mb-2 z-40 w-[min(360px,calc(100vw-2rem))] rounded-xl border border-base-300 bg-base-100 p-3 shadow-lg space-y-2">
+          {error && (
+            <p role="alert" className="text-error text-sm">
+              {error}
+            </p>
+          )}
+          {recording ? (
+            <div className="flex items-center gap-2">
+              <span role="status">
+                Recording {Math.floor(seconds / 60)}:
+                {String(seconds % 60).padStart(2, "0")}
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => recorder.current?.stop()}
+              >
+                Stop recording
+              </button>
+            </div>
+          ) : draft ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <audio
+                controls
+                src={draft.url}
+                aria-label="Voice message preview"
+                className="max-w-full"
+              />
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={sending}
+                onClick={() => setDraft(null)}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={sending}
+                onClick={() => void send()}
+              >
+                {sending ? "Sending…" : "Send voice message"}
+              </button>
+            </div>
+          ) : null}
         </div>
-      ) : draft ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <audio
-            controls
-            src={draft.url}
-            aria-label="Voice message preview"
-            className="max-w-full"
-          />
-          <button
-            className="btn btn-sm"
-            disabled={sending}
-            onClick={() => setDraft(null)}
-          >
-            Discard
-          </button>
-          <button
-            className="btn btn-primary btn-sm"
-            disabled={sending}
-            onClick={() => void send()}
-          >
-            {sending ? "Sending…" : "Send voice message"}
-          </button>
-        </div>
-      ) : (
-        <button
-          className="btn btn-sm"
-          disabled={requesting}
-          onClick={() => void start()}
-        >
-          {requesting ? "Waiting for microphone…" : "Record voice message"}
-        </button>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Video, Loader2 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useCallStore } from "../store/useCallStore";
@@ -34,30 +34,38 @@ export default function ChatWindowHeader() {
             </p>
           </div>
         </div>
-        {/* Close button */}
-        <button
-          className="btn btn-sm"
-          disabled={starting}
-          onClick={() => {
-            if (selectedUser)
-              void useCallStore
-                .getState()
-                .start(selectedUser._id)
-                .catch((error) =>
-                  toast.error(errorMessage(error, "Could not start call")),
-                );
-          }}
-        >
-          {starting ? "Calling…" : "Video call"}
-        </button>
-        <button
-          type="button"
-          aria-label="Back to contacts"
-          onClick={() => setSelectedUser(null)}
-          className="cursor-pointer hover:opacity-80"
-        >
-          <X />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-circle btn-sm"
+            aria-label={starting ? "Calling" : "Start video call"}
+            title="Start video call"
+            disabled={starting}
+            onClick={() => {
+              if (selectedUser)
+                void useCallStore
+                  .getState()
+                  .start(selectedUser._id)
+                  .catch((error) =>
+                    toast.error(errorMessage(error, "Could not start call")),
+                  );
+            }}
+          >
+            {starting ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Video size={18} />
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label="Back to contacts"
+            onClick={() => setSelectedUser(null)}
+            className="cursor-pointer hover:opacity-80"
+          >
+            <X />
+          </button>
+        </div>
       </div>
     </div>
   );
