@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LiveKitRoom, VideoConference } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { useCallStore } from "../store/useCallStore";
@@ -18,8 +18,12 @@ export default function CallPanel() {
   const [calls, setCalls] = useState<Invitation[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const dismissed = useRef(new Set<string>());
+  const userId = user?._id;
   useEffect(() => {
-    if (!user) {
+    dismissed.current.clear();
+    setCalls([]);
+    if (!userId) {
       useCallStore.getState().leave();
       return;
     }
@@ -29,7 +33,8 @@ export default function CallPanel() {
         const { data } = await axiosInstance.get<Invitation[]>("/calls", {
           timeout: 10000,
         });
-        if (alive) setCalls(data);
+        if (alive)
+          setCalls(data.filter((call) => !dismissed.current.has(call._id)));
       } catch {
         /* Invitations retry on the next poll. */
       }
@@ -40,7 +45,7 @@ export default function CallPanel() {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [user]);
+  }, [userId]);
   async function action(task: () => Promise<unknown>) {
     if (busy) return;
     setBusy(true);
@@ -136,9 +141,8 @@ export default function CallPanel() {
     call.members.some(
       (member) =>
         member.userId === user._id &&
-        (member.status === "accepted" ||
-          (member.status === "invited" &&
-            new Date(member.invitedUntil || 0).getTime() > Date.now())),
+        member.status === "invited" &&
+        new Date(member.invitedUntil || 0).getTime() > Date.now(),
     ),
   );
   return (
@@ -170,6 +174,7 @@ export default function CallPanel() {
               onClick={() =>
                 void action(async () => {
                   await axiosInstance.post(`/calls/${call._id}/decline`);
+                  dismissed.current.add(call._id);
                   setCalls((items) =>
                     items.filter((item) => item._id !== call._id),
                   );
