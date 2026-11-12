@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { io, type Socket } from "socket.io-client";
 import { useChatStore, type Message } from "./useChatStore";
 import { errorMessage } from "../lib/errors";
+import { useCallStore } from "./useCallStore";
 
 export type AuthUser = {
   _id: string;
@@ -46,6 +47,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isConnected: false,
   clearSession: () => {
     authVersion++;
+    useCallStore.getState().leave();
     get().disconnectSocket();
     useChatStore.getState().reset();
     set({ authUser: null });

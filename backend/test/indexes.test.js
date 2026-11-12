@@ -2,6 +2,7 @@ import { afterEach, mock, test } from "node:test";
 import assert from "node:assert/strict";
 import User from "../src/models/user.model.js";
 import Message from "../src/models/message.model.js";
+import Call from "../src/models/call.model.js";
 import { ensureIndexes } from "../src/lib/indexes.js";
 
 afterEach(() => mock.restoreAll());
@@ -14,6 +15,9 @@ test("production index setup waits for both collections without dropping indexes
   mock.method(Message, "createIndexes", async () => {
     completed.push("messages");
   });
+  mock.method(Call, "createIndexes", async () => {
+    completed.push("calls");
+  });
   mock.method(User, "syncIndexes", () =>
     assert.fail("would drop existing user indexes"),
   );
@@ -21,7 +25,7 @@ test("production index setup waits for both collections without dropping indexes
     assert.fail("would drop existing message indexes"),
   );
   await ensureIndexes();
-  assert.deepEqual(completed, ["users", "messages"]);
+  assert.deepEqual(completed, ["users", "messages", "calls"]);
 });
 
 test("index failures propagate so startup cannot serve without retry uniqueness", async () => {

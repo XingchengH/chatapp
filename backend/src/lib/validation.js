@@ -72,12 +72,12 @@ export function validateImage(value) {
     throw new HttpError(400, "Invalid image data or image exceeds 5 MB");
   return value;
 }
-export function validateMessage(body = {}) {
+export function validateMessage(body = {}, allowAudio = false) {
   const { text = "", image, clientMessageId } = body;
   if (typeof text !== "string" || text.length > MAX_MESSAGE_LENGTH)
     throw new HttpError(400, "Messages must contain at most 10,000 characters");
   const trimmed = text.trim();
-  if (!trimmed && !image)
+  if (!trimmed && !image && !allowAudio)
     throw new HttpError(400, "A message must contain text or an image");
   if (
     clientMessageId !== undefined &&

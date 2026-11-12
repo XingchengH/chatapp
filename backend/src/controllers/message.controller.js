@@ -1,6 +1,6 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
-import { uploadImage } from "../lib/cloudinary.js";
+import cloudinary, { uploadImage, uploadAudio } from "../lib/cloudinary.js";
 import { io, userRoom } from "../lib/socket.js";
 import { HttpError, respondWithError } from "../lib/errors.js";
 import {
@@ -77,7 +77,10 @@ export const getMessages = async (req, res) => {
 export const sendMessage = async (req, res) => {
   try {
     const receiverId = validateObjectId(req.params.id);
-    const { text, image, clientMessageId } = validateMessage(req.body);
+    const { text, image, clientMessageId } = validateMessage(
+      req.body,
+      Boolean(req.file),
+    );
     const senderId = req.user._id;
     if (receiverId === String(senderId))
       throw new HttpError(400, "Choose another user");
@@ -97,6 +100,7 @@ export const sendMessage = async (req, res) => {
       const upload = await uploadImage(image);
       imageUrl = upload.secure_url;
     }
+    const audio = req.file ? await uploadAudio(req.file.buffer) : undefined;
     let message;
     try {
       message = await Message.create({
@@ -104,9 +108,14 @@ export const sendMessage = async (req, res) => {
         receiverId,
         text,
         image: imageUrl,
+        audio,
         clientMessageId,
       });
     } catch (error) {
+      if (audio)
+        await cloudinary.uploader
+          .destroy(audio.publicId, { resource_type: "video" })
+          .catch(() => {});
       if (error.code !== 11000 || !clientMessageId) throw error;
       message = await Message.findOne(duplicateQuery);
       if (!message || String(message.receiverId) !== receiverId)

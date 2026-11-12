@@ -1,10 +1,14 @@
 import { X } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import { useCallStore } from "../store/useCallStore";
+import toast from "react-hot-toast";
+import { errorMessage } from "../lib/errors";
 
 export default function ChatWindowHeader() {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const starting = useCallStore((state) => state.starting);
 
   return (
     <div className="p-2.5 border-b border-base-300">
@@ -31,6 +35,21 @@ export default function ChatWindowHeader() {
           </div>
         </div>
         {/* Close button */}
+        <button
+          className="btn btn-sm"
+          disabled={starting}
+          onClick={() => {
+            if (selectedUser)
+              void useCallStore
+                .getState()
+                .start(selectedUser._id)
+                .catch((error) =>
+                  toast.error(errorMessage(error, "Could not start call")),
+                );
+          }}
+        >
+          {starting ? "Calling…" : "Video call"}
+        </button>
         <button
           type="button"
           aria-label="Back to contacts"

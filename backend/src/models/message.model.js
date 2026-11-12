@@ -20,6 +20,7 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    audio: { url: String, publicId: String, duration: Number, bytes: Number },
     clientMessageId: { type: String },
   },
   {
@@ -28,7 +29,7 @@ const messageSchema = new mongoose.Schema(
 );
 
 messageSchema.pre("validate", function () {
-  if (!this.text?.trim() && !this.image)
+  if (!this.text?.trim() && !this.image && !this.audio?.url)
     this.invalidate("text", "A message must contain text or an image");
 });
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1, _id: -1 });

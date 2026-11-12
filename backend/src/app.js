@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import callRoutes from "./routes/call.route.js";
 import { app } from "./lib/socket.js";
 import { clientOrigin } from "./lib/config.js";
 
@@ -32,6 +33,7 @@ app.use("/api", (_req, res, next) => {
 });
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/calls", callRoutes);
 app.use("/api", (_req, res) =>
   res.status(404).json({ message: "API route not found" }),
 );

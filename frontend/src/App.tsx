@@ -14,6 +14,7 @@ const SignupPage = lazy(() => import("./pages/SignupPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const CallPanel = lazy(() => import("./components/CallPanel"));
 const Loading = () => (
   <div
     role="status"
@@ -97,6 +98,9 @@ export default function App() {
   return (
     <>
       <Toaster position="top-center" />
+      <Suspense fallback={null}>
+        <CallPanel />
+      </Suspense>
       {isCheckingAuth ? (
         <Loading />
       ) : (

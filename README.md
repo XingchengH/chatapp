@@ -63,6 +63,16 @@ All protected routes and sockets use the HTTP-only `jwt` cookie. Socket user IDs
 - Text is limited to 10,000 characters. Attachments must be PNG, JPEG, GIF or WebP and at most 5 MB before base64 encoding. The server checks MIME format, file signatures and size before uploading.
 - Authentication attempts are limited to 30 per IP per 15 minutes. Sending is limited to 60 requests per user per minute; avatar changes to 10 per user per minute. Limits include retries.
 
+## Voice messages and video calls
+
+Voice messages use the browser microphone, with stop, preview, discard and retry controls. Recordings are limited to five minutes and 10 MB; the server checks Cloudinary's detected duration and rejects video tracks. Uploads require the existing Cloudinary credentials. Audio files use Cloudinary's video resource type, which also handles audio. Media URLs use the same public asset delivery model as existing image messages; do not treat the URLs as private document storage.
+
+For live calls, configure `LIVEKIT_URL=wss://your-project.livekit.cloud`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` on the backend. Never expose these credentials through `VITE_*` variables. Create a managed LiveKit project separately; installing the SDK does not create an account or paid subscription.
+
+Start from the Video call button in a conversation. Invitees see an invitation throughout the app and may accept or decline within 60 seconds. The host can invite additional loaded contacts and end the call for everyone. Each room allows at most eight identities; the host and all invitations count toward eight reserved places. Leaving preserves accepted membership so a participant can rejoin during the four-hour call window. Microphone and camera start off; enable them explicitly in the call controls. Calls are not recorded. Notifications refresh every five seconds while the app is open; background push notifications are not included.
+
+Run `npm run check` for regression tests, media validation and call token authorization checks. Actual audio capture, Cloudinary processing, LiveKit connectivity, and multi-device camera/microphone behavior additionally require configured services and real browser/device verification before production release.
+
 ## Project structure
 
 - `backend/src/controllers`: validated API handlers

@@ -10,6 +10,7 @@ export type Message = {
   receiverId: string;
   text?: string;
   image?: string | null;
+  audio?: { url: string; duration: number; bytes: number };
   createdAt: string;
   updatedAt: string;
   clientMessageId?: string;
@@ -18,6 +19,7 @@ export type MessageData = {
   text: string;
   image: string | null;
   clientMessageId: string;
+  audio?: Blob;
 };
 type Conversation = {
   messages: Message[];
@@ -152,9 +154,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sendMessage: async (messageData, userId) => {
     const epoch = session;
     try {
+      let payload: MessageData | FormData = messageData;
+      if (messageData.audio) {
+        payload = new FormData();
+        payload.append("audio", messageData.audio, "recording");
+        payload.append("clientMessageId", messageData.clientMessageId);
+      }
       const { data } = await axiosInstance.post<Message>(
-        "/messages/send/" + userId,
-        messageData,
+        (messageData.audio ? "/messages/audio/" : "/messages/send/") + userId,
+        payload,
+        { timeout: 90000 },
       );
       if (epoch !== session) return;
       set((state) => {
